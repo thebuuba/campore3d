@@ -1,0 +1,27 @@
+{
+  "name": "campore3d",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "description": "Editor conceptual 2D y 3D de campamentos, independiente de Aula Base.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "vendor": "node scripts/vendor.mjs",
+    "build:standalone": "node scripts/standalone.mjs",
+    "postinstall": "node scripts/vendor.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "three": "0.160.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thebuuba/campore3d.git"
+  }
+}

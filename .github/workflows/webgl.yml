@@ -1,0 +1,27 @@
+name: Verificar carpas y entrada en WebGL
+on:
+  pull_request:
+    paths: ['src/**', 'tests/**', 'scripts/**', 'index.html', 'package.json', '.github/workflows/webgl.yml']
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run check && npm test && npm run build && npm run build:standalone
+      - run: python3 -m pip install playwright==1.57.0
+      - run: python3 -m playwright install --with-deps chromium
+      - name: Real WebGL and native persistence (no mocks)
+        run: python3 tests/structures-ui.py --require-3d
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carpas-y-entrada-webgl
+          path: test-results/
+          retention-days: 7
