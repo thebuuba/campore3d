@@ -10,7 +10,7 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="./" aria-label="Legado Studio"><span class="brand-mark" data-icon="tent"></span><span>LEGADO <b>STUDIO</b></span><span class="beta">0.3</span></a>
+  <a class="brand" href="./" aria-label="Legado Studio"><span class="brand-mark" data-icon="tent"></span><span>LEGADO <b>STUDIO</b></span><span class="beta">0.4</span></a>
   <div class="project-name"><input id="project-name" aria-label="Nombre del proyecto" maxlength="80" value="Campamento Legado"><span id="save-status">Solo en este equipo</span></div>
   <div class="top-actions"><button class="icon-btn" id="undo" title="Deshacer · Ctrl Z" aria-label="Deshacer" data-icon="undo"></button><button class="icon-btn" id="redo" title="Rehacer · Ctrl Shift Z" aria-label="Rehacer" data-icon="redo"></button><span class="divider"></span><button class="quiet-btn" id="import-btn"><span data-icon="upload"></span><span class="hide-small">Abrir</span></button><button class="quiet-btn" id="save"><span data-icon="save"></span><span class="hide-small">Guardar</span></button><button class="primary" id="export"><span data-icon="download"></span>Exportar proyecto</button><input type="file" id="import" accept=".json,application/json" hidden></div>
 </header>
@@ -32,7 +32,7 @@
   <section class="stage" aria-label="Editor del campamento">
     <div class="stage-header"><div><span class="eyebrow">BICAMPOREE · LEGADO</span><h2>Una idea. Todo un campamento.</h2></div><span id="engine-status" class="engine-pill">Plano listo · cargando 3D</span></div>
     <div class="view-tools"><div class="segmented"><button id="view3d" title="Perspectiva 3D"><span data-icon="cube"></span>3D</button><button id="view2d" class="active" title="Plano superior editable"><span data-icon="grid"></span>Plano</button><button id="viewfront" title="Mirar desde la entrada"><span data-icon="gate"></span>Entrada</button></div><div class="tools-right"><label class="snap"><input id="snap" type="checkbox" checked>Encajar 0.5 m</label><button id="fit" class="icon-btn" title="Centrar campo" aria-label="Centrar campo" data-icon="focus"></button><button id="capture" class="icon-btn" title="Descargar imagen PNG" aria-label="Descargar imagen PNG" data-icon="image"></button></div></div>
-    <div id="viewport"><div id="canvas3d" hidden></div><div id="plan2d"></div><div id="viewer-message" role="status" hidden></div><div class="compass"><span>N*</span><span data-icon="compass"></span></div><div class="legend"><span><i style="--swatch:#668f7b"></i>Varones</span><span><i style="--swatch:#d5a274"></i>Hembras</span><span><i style="--swatch:#8db1ba"></i>Servicios</span></div></div>
+    <div id="viewport"><div id="canvas3d" hidden></div><div id="plan2d"></div><div id="viewer-message" role="status" hidden></div><div class="compass"><span>N*</span><span data-icon="compass"></span></div><div class="legend"><span><i style="--swatch:#185865"></i>Varones</span><span><i style="--swatch:#bf895c"></i>Hembras</span><span><i style="--swatch:#8db1ba"></i>Servicios</span></div></div>
     <div class="stage-bottom"><span id="interaction-hint">Selecciona y arrastra una pieza · R: girar · Supr: eliminar</span><span>* Orientación ilustrativa</span></div>
   </section>
   <aside class="inspector panel">

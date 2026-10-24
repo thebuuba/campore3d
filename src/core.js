@@ -1,13 +1,14 @@
+import { structureOptions, gateInventory } from './structures.js';
 import { canopyOptions, canopyInventory } from './canopy.js';
 /** Pure project model. Units: metres; yaw: degrees; positive Z is the front. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const CATALOG = Object.freeze({
-  tentM: { name: 'Carpa · varones', short: 'Varones', category: 'camp', icon: 'tent', color: '#668f7b', w: 3.4, h: 2.2, d: 4.2 },
-  tentF: { name: 'Carpa · hembras', short: 'Hembras', category: 'camp', icon: 'tent', color: '#d5a274', w: 3.4, h: 2.2, d: 4.2 },
+  tentM: { name: 'Carpa · varones', short: 'Varones', category: 'camp', icon: 'tent', color: '#185865', w: 3.4, h: 2.2, d: 4.2 },
+  tentF: { name: 'Carpa · hembras', short: 'Hembras', category: 'camp', icon: 'tent', color: '#bf895c', w: 3.4, h: 2.2, d: 4.2 },
   kitchen: { name: 'Cocina · toldo', short: 'Cocina', category: 'camp', icon: 'kitchen', color: '#f6f5ef', w: 3, h: 3.2, d: 3 },
   bath: { name: 'Baño / vestidor', short: 'Vestidor', category: 'camp', icon: 'bath', color: '#8db1ba', w: 1.5, h: 2.4, d: 1.5 },
   bin: { name: 'Zafacón', short: 'Zafacón', category: 'camp', icon: 'bin', color: '#708572', w: 0.7, h: 1, d: 0.7 },
-  gate: { name: 'Entrada Legado', short: 'Entrada', category: 'build', icon: 'gate', color: '#b17a4b', w: 5.5, h: 3.6, d: 0.8 },
+  gate: { name: 'Entrada Legado', short: 'Entrada', category: 'build', icon: 'gate', color: '#b17a4b', w: 6.4, h: 4.6, d: 1.8 },
   exit: { name: 'Salida secundaria', short: 'Salida', category: 'build', icon: 'exit', color: '#72967b', w: 3, h: 2, d: 0.3 },
   post: { name: 'Poste de madera', short: 'Poste', category: 'build', icon: 'post', color: '#a7774e', w: 0.18, h: 2.5, d: 0.18 },
   beam: { name: 'Travesaño', short: 'Travesaño', category: 'build', icon: 'beam', color: '#a7774e', w: 3, h: 0.18, d: 0.18 },
@@ -25,6 +26,7 @@ export function createItem(kind, overrides = {}) {
   return { id: uid(), kind, name: base.name, x: 0, y: 0, z: 0, yaw: 0,
     w: base.w, h: base.h, d: base.d, color: base.color, visible: true,
     label: kind === 'gate' ? 'LEGADO' : '', ...overrides,
+    ...(['tentM','tentF','gate'].includes(kind) ? {structure:structureOptions(kind,overrides.structure)} : {}),
     ...(kind === 'kitchen' ? {canopy:canopyOptions(overrides.canopy, overrides.h ?? base.h)} : {}) };
 }
 export function createProject() {
@@ -80,7 +82,7 @@ export function validateProject(input) {
     s = { schemaVersion: 1, name: 'Proyecto importado', layout: input.layout || 'back',
       terrain: { width: input.W, length: input.L, fenceSpacing: 3, fenceHeight: 1.2 },
       items: input.items.map(i => {
-        const def = CATALOG[i.kind];
+        const def = i.kind === 'gate' ? {w:5.5,h:3.6,d:.8} : CATALOG[i.kind];
         if (!def) throw new Error('Tipo de pieza antiguo no reconocido.');
         const k = i.scale ?? 1;
         finite(k, 0.2, 5, 'escala antigua');
@@ -88,7 +90,7 @@ export function validateProject(input) {
           w: def.w * k, h: def.h * k, d: def.d * k });
       }) };
   }
-  if (![1, SCHEMA_VERSION].includes(s.schemaVersion)) throw new Error('Versión del proyecto no compatible.');
+  if (![1, 2, SCHEMA_VERSION].includes(s.schemaVersion)) throw new Error('Versión del proyecto no compatible.');
   const t = s.terrain;
   if (!t || !Array.isArray(s.items) || s.items.length > 500) throw new Error('Terreno o cantidad de piezas no válidos.');
   const ids = new Set();
@@ -105,6 +107,7 @@ export function validateProject(input) {
       d: finite(i.d, 0.05, 50, 'fondo de pieza'),
       color: /^#[0-9a-f]{6}$/i.test(i.color) ? i.color : CATALOG[i.kind].color,
       visible: i.visible !== false,
+      ...(['tentM','tentF','gate'].includes(i.kind) ? {structure:structureOptions(i.kind,i.structure)} : {}),
       ...(i.kind === 'kitchen' ? {canopy:canopyOptions(i.canopy, i.h)} : {}) };
   });
   return { schemaVersion: SCHEMA_VERSION, name: String(s.name || 'Campamento Legado').slice(0, 80),
@@ -173,7 +176,7 @@ export function inventory(project) {
   // Geometric centreline lengths only. Buried lengths, knots and waste are NOT included.
   let poles = fence.posts.length, wood = poles * project.terrain.fenceHeight;
   for (const i of project.items.filter(i => i.visible)) {
-    if (i.kind === 'gate') { poles += 2; wood += i.h*2 + i.w*2 + Math.hypot(i.w*0.22,i.h*0.24)*2; }
+    if (i.kind === 'gate') { const value=gateInventory(i); poles+=value.poles; wood+=value.wood; }
     if (i.kind === 'exit') { poles += 2; wood += i.h*2; }
     if (i.kind === 'post') { poles += 1; wood += i.h; }
     if (i.kind === 'beam') wood += i.w;

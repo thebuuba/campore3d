@@ -1,3 +1,4 @@
+import { createDome, createTimberGate } from './structures3d.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { fencePlan } from './core.js';
@@ -47,24 +48,18 @@ export function createScene(host, callbacks) {
   }
   function build(i){const {w,h,d,kind}=i,g=new THREE.Group(),cloth=standard(i.color,{side:THREE.DoubleSide});
     if(kind==='tentM'||kind==='tentF'){
-      g.add(cube(w+.16,.045,d+.16,standard('#63775b')));const tent=roof(w,h,d,cloth);tent.position.y=.05;g.add(tent);
-      const dark=roof(w*.5,h*.75,.012,standard('#3d5345'));dark.position.set(0,.05,d/2+.012);g.add(dark);
-      g.add(bar([0,h+.05,-d/2],[0,h+.05,d/2],.024,ropeMat));
-      for(const x of [-1,1])for(const z of [-1,1]){g.add(bar([x*w*.48,.2,z*d*.44],[x*(w/2+.35),.02,z*(d/2+.35)],.012,ropeMat));}
+      g.add(createDome(i));
     }else if(kind==='kitchen'){
       g.add(createCanopy(i));
     }else if(kind==='bath'){
       g.add(cube(w,h*.86,d,cloth));const r=roof(w,h*.14,d,cloth);r.position.y=h*.86;g.add(r);
       g.add(cube(w*.58,h*.74,.016,standard('#6d939c'),0,h*.37,d/2+.012));
       g.add(bar([0,.07,d/2+.025],[0,h*.72,d/2+.025],.008,ropeMat));
-    }else if(kind==='gate'||kind==='exit'){
+    }else if(kind==='gate'){
+      g.add(createTimberGate(i));
+    }else if(kind==='exit'){
       for(const x of [-w/2,w/2])g.add(bar([x,0,0],[x,h,0],.12,cloth));
-      if(kind==='gate'){
-        g.add(bar([-w/2,h*.88,0],[w/2,h*.88,0],.12,cloth));g.add(bar([-w/2,h*.67,0],[w/2,h*.67,0],.075,cloth));
-        for(const side of [-1,1])g.add(bar([side*w*.5,h*.57,0],[side*w*.28,h*.81,0],.07,cloth));
-        const sign=label(i.label||'LEGADO',w*.72,h*.19);sign.position.set(0,h*.78,.14);g.add(sign);
-        for(const x of [-w/2,w/2])for(let k=0;k<3;k++){const tie=new THREE.Mesh(new THREE.TorusGeometry(.14,.017,5,12),ropeMat);tie.rotation.x=Math.PI/2;tie.position.set(x,h*.86+k*.04,0);g.add(tie);}
-      }else{const sign=label('SALIDA',Math.min(1.5,w*.65),.38,'#6c9074','#ffffff');sign.position.set(-w/2,h*.83,.14);g.add(sign);}
+      const sign=label('SALIDA',Math.min(1.5,w*.65),.38,'#6c9074','#ffffff');sign.position.set(-w/2,h*.83,.14);g.add(sign);
     }else if(kind==='post')g.add(cube(w,h,d,cloth));
     else if(kind==='beam')g.add(cube(w,h,d,cloth));
     else if(kind==='bin'){
@@ -99,7 +94,7 @@ export function createScene(host, callbacks) {
     sun.shadow.camera.right=sun.shadow.camera.top=size*.65;sun.shadow.camera.far=400;sun.shadow.camera.updateProjectionMatrix();
   }
   function render(p,id){project=p;selection=id;drawEnvironment();const existing=new Set();
-    for(const i of p.items){existing.add(i.id);const key=JSON.stringify([i.kind,i.w,i.h,i.d,i.color,i.label,i.canopy]);let record=objects.get(i.id);
+    for(const i of p.items){existing.add(i.id);const key=JSON.stringify([i.kind,i.w,i.h,i.d,i.color,i.label,i.canopy,i.structure]);let record=objects.get(i.id);
       if(!record||record.key!==key){if(record){scene.remove(record.group);dispose(record.group);}const group=build(i);group.userData.id=i.id;scene.add(group);record={group,key};objects.set(i.id,record);}
       record.group.position.set(i.x,i.y,i.z);record.group.rotation.y=i.yaw*Math.PI/180;record.group.visible=i.visible;
     }

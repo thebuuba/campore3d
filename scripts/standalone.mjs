@@ -4,9 +4,9 @@ let html=await readFile('index.html','utf8');
 const css=await readFile('src/styles.css','utf8');
 const read=async name=>strip(await readFile(`src/${name}.js`,'utf8'));
 const engine="import * as THREE from 'three';\nimport {OrbitControls} from 'three/addons/controls/OrbitControls.js';\n"+
-  await read('canopy')+'\n'+await read('core')+'\n'+await read('canopy3d')+'\n'+await read('scene3d')+'\nexport {createScene};';
+  await read('canopy')+'\n'+await read('structures')+'\n'+await read('core')+'\n'+await read('canopy3d')+'\n'+await read('structures3d')+'\n'+await read('scene3d')+'\nexport {createScene};';
 const engineURL='data:text/javascript;base64,'+Buffer.from(engine).toString('base64');
-let code='';for(const file of ['canopy','core','icons','plan2d','app'])code+='\n'+await read(file);
+let code='';for(const file of ['canopy','structures','core','icons','structures2d','structures-ui','plan2d','app'])code+='\n'+await read(file);
 code=code.replace("import('./scene3d.js')",`import(${JSON.stringify(engineURL)})`);
 html=html.replace('./vendor/three.module.js','https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js')
   .replace('"./vendor/"','"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"')

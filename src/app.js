@@ -1,3 +1,4 @@
+import { mountStructureFields, syncStructureFields, readStructureFields } from './structures-ui.js';
 import { WALL_SIDES, WALL_TYPES } from './canopy.js';
 import { CATALOG, createProject, createItem, validateProject, arrangeProject, setSecondaryExit,
   copy, clamp, warnings, inventory, createHistory } from './core.js';
@@ -5,6 +6,7 @@ import { icon, fillIcons } from './icons.js';
 import { createPlan } from './plan2d.js';
 const $=id=>document.getElementById(id), KEY='legado-studio-v1';
 fillIcons();
+mountStructureFields();
 const wallNames={open:'Abierto', solid:'Cerrado', window:'Con ventana', door:'Con puerta'};
 for(const side of WALL_SIDES) for(const type of WALL_TYPES) {const opt=document.createElement('option');opt.value=type;opt.textContent=wallNames[type];$('wall-'+side).append(opt);}
 let project=createProject(),startupWarning='';
@@ -38,6 +40,7 @@ function renderSelection(){const i=project.items.find(i=>i.id===selected);$('emp
   $('selected-icon').innerHTML=icon(CATALOG[i.kind].icon);$('selected-kind').textContent=CATALOG[i.kind].name;
   for(const field of ['name','x','y','z','w','h','d','yaw','color','label'])$('item-'+field).value=typeof i[field]==='number'?Number(i[field].toFixed(3)):i[field];
   $('gate-label-field').hidden=i.kind!=='gate';
+  syncStructureFields(i);
   $('canopy-fields').hidden=i.kind!=='kitchen';$('canopy-fields').disabled=i.kind!=='kitchen';
   if(i.kind==='kitchen') {for(const side of WALL_SIDES)$('wall-'+side).value=i.canopy.walls[side];
     $('canopy-rise').value=i.canopy.roofRise;$('canopy-rise').required=true;
@@ -102,6 +105,7 @@ $('secondary-exit').onchange=()=>setProject(setSecondaryExit(project,$('secondar
 $('item-form').onsubmit=e=>{e.preventDefault();try{mutate(p=>{const i=p.items.find(i=>i.id===selected);if(!i)return;
   for(const field of ['x','y','z','w','h','d','yaw'])i[field]=Number($('item-'+field).value);
   i.name=$('item-name').value.trim()||CATALOG[i.kind].name;i.color=$('item-color').value;i.label=$('item-label').value;
+  readStructureFields(i);
   if(i.kind==='kitchen')i.canopy={roofRise:Number($('canopy-rise').value), walls:Object.fromEntries(WALL_SIDES.map(side=>[side,$('wall-'+side).value])), guyRopes:$('canopy-ropes').checked, table:$('canopy-table').checked};
 });toast('Pieza actualizada.');}catch(err){toast(err.message);}};
 $('focus-item').onclick=()=>{if(!selected)return;if(view==='2d')plan.focus(selected);else engine?.focus(selected);};
