@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Legado 3D — Planificador</title>
+  <link rel="icon" href="data:,">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; color: #253b2b; background: #f4f6f0; }
+    header { height: 58px; display: flex; align-items: center; gap: 8px; padding: 0 18px; background: white; border-bottom: 1px solid #ddd; }
+    main { display: grid; grid-template-columns: 280px minmax(0, 1fr); height: calc(100dvh - 58px); }
+    aside { padding: 16px; overflow-y: auto; background: white; border-right: 1px solid #ddd; }
+    h3 { margin: 20px 0 8px; font-size: 16px; }
+    label { display: block; margin: 12px 0 4px; font-size: 13px; }
+    input, select, button { width: 100%; padding: 9px; border: 1px solid #cdd6c9; border-radius: 7px; background: white; font: inherit; font-size: 13px; }
+    button { cursor: pointer; margin-top: 8px; background: #e6f1e1; }
+    button:hover { background: #d2e9c8; }
+    button:disabled { opacity: .45; cursor: default; }
+    small { color: #627267; line-height: 1.5; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #scene { position: relative; overflow: hidden; min-width: 0; min-height: 0; background: #eaf2f4; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #message { position: absolute; inset: 20px 20px auto; z-index: 2; padding: 16px; background: white; border: 1px solid #cdd6c9; border-radius: 10px; white-space: pre-wrap; }
+    #message[hidden] { display: none; }
+    #hint { position: absolute; bottom: 14px; left: 14px; right: 14px; padding: 9px 12px; background: #ffffffdf; border-radius: 8px; font-size: 12px; pointer-events: none; }
+    #status { font-size: 13px; padding: 10px; background: #f4f6f0; border-radius: 7px; }
+    @media (max-width: 700px) {
+      header { font-size: 13px; }
+      main { grid-template-columns: 1fr; grid-template-rows: 38% 62%; }
+      aside { border-right: 0; border-bottom: 1px solid #ddd; }
+    }
+  </style>
+
+  <!-- Las dos dependencias utilizan exactamente la misma versión. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header><strong>🏕️ LEGADO 3D</strong><span>· Planificador de campamento</span></header>
+  <main>
+    <aside>
+      <strong>Terreno provisional</strong>
+      <label for="width">Ancho (metros)</label>
+      <input id="width" type="number" min="12" max="150" value="40">
+      <label for="length">Largo (metros)</label>
+      <input id="length" type="number" min="12" max="200" value="60">
+      <button id="resize">Actualizar terreno</button>
+      <label for="layout">Distribución de ejemplo</label>
+      <select id="layout">
+        <option value="back">Servicios al fondo</option>
+        <option value="left">Servicios a la izquierda</option>
+        <option value="right">Servicios a la derecha</option>
+      </select>
+      <button id="arrange">Aplicar distribución</button>
+      <small>Reemplaza la distribución actual. Revisa separaciones al cambiar las medidas.</small>
+      <div class="row">
+        <button id="view3d">Vista 3D</button>
+        <button id="viewTop">Vista aérea</button>
+      </div>
+
+      <h3>Agregar estructuras</h3>
+      <select id="kind" aria-label="Tipo de estructura">
+        <option value="tentM">Carpa varones</option>
+        <option value="tentF">Carpa hembras</option>
+        <option value="kitchen">Cocina</option>
+        <option value="bath">Baño tipo vestidor</option>
+        <option value="bin">Zafacón</option>
+        <option value="gate">Entrada de madera</option>
+        <option value="exit">Salida secundaria</option>
+        <option value="post">Poste de madera</option>
+        <option value="beam">Travesaño de madera</option>
+      </select>
+      <button id="add">Agregar al campo</button>
+
+      <h3>Objeto seleccionado</h3>
+      <small id="selection">Haz clic en una estructura; arrástrala para moverla.</small>
+      <div class="row">
+        <div><label for="x">Posición X (m)</label><input id="x" type="number" step="0.1"></div>
+        <div><label for="z">Posición Z (m)</label><input id="z" type="number" step="0.1"></div>
+      </div>
+      <label for="rot">Rotación (grados)</label>
+      <input id="rot" type="number" step="5">
+      <label for="scale">Escala</label>
+      <input id="scale" type="number" step="0.1" min="0.2" max="5">
+      <button id="apply">Aplicar cambios</button>
+      <div class="row"><button id="duplicate">Duplicar</button><button id="remove">Eliminar</button></div>
+
+      <h3>Proyecto</h3>
+      <button id="save">Guardar en este navegador</button>
+      <button id="load">Recuperar guardado</button>
+      <button id="export">Exportar JSON</button>
+      <label for="import">Importar JSON</label>
+      <input id="import" type="file" accept=".json,application/json">
+      <button id="reset">Restaurar ejemplo</button>
+      <p id="status" role="status">Cargando visualizador…</p>
+      <small>Diseño conceptual, no un cálculo estructural. Verifiquen medidas, estabilidad y seguridad antes del montaje.</small>
+    </aside>
+    <section id="scene" aria-label="Campo en 3D">
+      <div id="message" role="alert">Cargando el campo 3D…</div>
+      <div id="hint">Arrastra el fondo: girar · Rueda: zoom · Botón derecho: desplazar · Arrastra una estructura: mover</div>
+    </section>
+  </main>
+
+  <script type="module">
+    const $ = id => document.getElementById(id);
+    const status = text => { $("status").textContent = text; };
+    function showError(error) {
+      console.error(error);
+      $("message").hidden = false;
+      $("message").textContent = "No se pudo iniciar o mantener el visualizador 3D.\n" +
+        (error?.message || String(error)) +
+        "\nComprueba la conexión a internet y abre el archivo con Live Server.";
+      status("Error del visualizador. Consulta el mensaje del campo.");
+    }
+    window.addEventListener("error", event => showError(event.error || event.message));
+    window.addEventListener("unhandledrejection", event => showError(event.reason));
+
+    try {
+      // La importación dinámica permite mostrar un mensaje si falla la descarga.
+      const THREE = await import("three");
+      const { OrbitControls } = await import("three/addons/controls/OrbitControls.js");
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xeaf2f4);
+      const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 2000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      $("scene").appendChild(renderer.domElement);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.maxPolarAngle = Math.PI / 2.05;
+      controls.minDistance = 3;
+      controls.maxDistance = 800;
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x70865e, 2));
+      const sun = new THREE.DirectionalLight(0xffffff, 2);
+      sun.position.set(25, 55, 20);
+      scene.add(sun);
+
+      let W = 40, L = 60, items = [], selected = null, outline = null;
+      let environment = new THREE.Group();
+      scene.add(environment);
+      const names = Object.fromEntries([...$("kind").options].map(o => [o.value, o.text]));
+      const mat = color => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
+      const materials = {
+        grass: mat(0x91bb7e), wood: mat(0x92613b), tentM: mat(0x538b67),
+        tentF: mat(0xd29c66), kitchen: mat(0xe1c494), bath: mat(0x81b9c5), bin: mat(0x566f5b)
+      };
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+      function box(w, h, d, material, x = 0, y = h / 2, z = 0) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+        mesh.position.set(x, y, z);
+        return mesh;
+      }
+      function dispose(group) {
+        group.traverse(object => object.geometry?.dispose());
+        scene.remove(group);
+      }
+      function make(kind) {
+        const group = new THREE.Group();
+        if (kind === "tentM" || kind === "tentF") {
+          const tent = new THREE.Mesh(new THREE.ConeGeometry(2.2, 2.4, 4), materials[kind]);
+          tent.rotation.y = Math.PI / 4;
+          tent.position.y = 1.2;
+          group.add(tent);
+        } else if (kind === "bath") {
+          group.add(box(1.5, 2.1, 1.5, materials.bath));
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(1.2, 0.5, 4), materials.bath);
+          roof.rotation.y = Math.PI / 4;
+          roof.position.y = 2.35;
+          group.add(roof);
+        } else if (kind === "kitchen") {
+          group.add(box(7, 0.2, 5, materials.kitchen, 0, 3.1, 0));
+          group.add(box(4, 0.15, 1.5, materials.wood, 0, 1, 0));
+          for (const x of [-2.8, 2.8]) for (const z of [-1.8, 1.8]) {
+            group.add(box(0.17, 3, 0.17, materials.wood, x, 1.5, z));
+          }
+        } else if (kind === "gate" || kind === "exit") {
+          const span = kind === "gate" ? 5 : 3;
+          for (const x of [-span / 2, span / 2]) {
+            group.add(box(0.24, 3.4, 0.24, materials.wood, x, 1.7, 0));
+          }
+          if (kind === "gate") group.add(box(span + 0.5, 0.35, 0.3, materials.wood, 0, 3.3, 0));
+        } else if (kind === "post") {
+          group.add(box(0.2, 2.2, 0.2, materials.wood));
+        } else if (kind === "beam") {
+          group.add(box(3, 0.2, 0.2, materials.wood));
+        } else {
+          const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.34, 1, 12), materials.bin);
+          bin.position.y = 0.5;
+          group.add(bin);
+        }
+        return group;
+      }
+      function add(kind, x = 0, z = 0, rot = 0, scale = 1) {
+        const group = make(kind);
+        group.position.set(x, 0, z);
+        group.rotation.y = rot;
+        group.scale.setScalar(scale);
+        const item = { kind, x, z, rot, scale, group };
+        items.push(item);
+        scene.add(group);
+        return item;
+      }
+      function syncFields() {
+        if (!selected) return;
+        $("x").value = selected.x.toFixed(1);
+        $("z").value = selected.z.toFixed(1);
+        $("rot").value = Math.round(selected.rot * 180 / Math.PI);
+        $("scale").value = selected.scale;
+      }
+      function select(item) {
+        selected = item || null;
+        if (outline) {
+          scene.remove(outline);
+          outline.geometry.dispose();
+          outline.material.dispose();
+          outline = null;
+        }
+        for (const id of ["x", "z", "rot", "scale", "apply", "duplicate", "remove"]) $(id).disabled = !selected;
+        $("selection").textContent = selected ? names[selected.kind] : "Haz clic en una estructura; arrástrala para moverla.";
+        if (selected) {
+          outline = new THREE.BoxHelper(selected.group, 0xffb52e);
+          scene.add(outline);
+          syncFields();
+        } else {
+          for (const id of ["x", "z", "rot", "scale"]) $(id).value = "";
+        }
+      }
+      function clear() {
+        select(null);
+        items.forEach(item => dispose(item.group));
+        items = [];
+      }
+      function perimeter() {
+        dispose(environment);
+        environment = new THREE.Group();
+        scene.add(environment);
+        environment.add(box(W, 0.08, L, materials.grass, 0, -0.04, 0));
+        function opening(x, z) {
+          return items.some(item => {
+            if (item.kind !== "gate" && item.kind !== "exit") return false;
+            const dx = x - item.x, dz = z - item.z;
+            const c = Math.cos(item.rot), s = Math.sin(item.rot);
+            const span = (item.kind === "gate" ? 5 : 3) * item.scale;
+            return Math.abs(c * dx - s * dz) < span / 2 + 0.3 && Math.abs(s * dx + c * dz) < 1.5;
+          });
+        }
+        function post(x, z) {
+          if (!opening(x, z)) environment.add(box(0.16, 1.2, 0.16, materials.wood, x, 0.6, z));
+        }
+        const nx = Math.ceil(W / 4), nz = Math.ceil(L / 4);
+        for (let i = 0; i <= nx; i++) {
+          const x = -W / 2 + i * W / nx;
+          post(x, -L / 2); post(x, L / 2);
+        }
+        for (let i = 1; i < nz; i++) {
+          const z = -L / 2 + i * L / nz;
+          post(-W / 2, z); post(W / 2, z);
+        }
+      }
+      function view(top = false) {
+        const size = Math.max(W, L);
+        const aspect = Math.max(0.2, $("scene").clientWidth / Math.max(1, $("scene").clientHeight));
+        const distance = size * Math.max(1, 1 / aspect);
+        controls.target.set(0, 0, 0);
+        camera.position.set(top ? 0 : distance * 0.75, distance, top ? 0.01 : distance);
+        controls.update();
+      }
+      function arrange() {
+        clear();
+        const mode = $("layout").value;
+        const angle = mode === "left" ? Math.PI / 2 : mode === "right" ? -Math.PI / 2 : 0;
+        const w = mode === "back" ? W : L, l = mode === "back" ? L : W;
+        function place(kind, x, z) {
+          return add(kind, Math.cos(angle) * x + Math.sin(angle) * z, -Math.sin(angle) * x + Math.cos(angle) * z, angle);
+        }
+        for (let row = 0; row < 4; row++) for (let col = 0; col < 3; col++) {
+          const x = w * (0.37 - col * 0.125), z = l * (-0.16 + row * 0.15);
+          place("tentM", -x, z);
+          place("tentF", x, z);
+        }
+        place("kitchen", -w * 0.27, -l * 0.38);
+        place("bath", w * 0.27, -l * 0.38);
+        place("gate", 0, l / 2);
+        place("bin", 0, -l * 0.18);
+        perimeter();
+        view();
+        status("Ejemplo creado. Ajusta la cantidad de carpas y sus separaciones al terreno.");
+      }
+      function state() {
+        return { W, L, layout: $("layout").value, items: items.map(({ kind, x, z, rot, scale }) => ({ kind, x, z, rot, scale })) };
+      }
+      function restore(data) {
+        if (!data || !Number.isFinite(data.W) || !Number.isFinite(data.L) || data.W < 12 || data.W > 150 || data.L < 12 || data.L > 200 || !Array.isArray(data.items) || data.items.length > 500) {
+          throw new Error("Dimensiones o formato del proyecto no válidos.");
+        }
+        for (const item of data.items) {
+          if (!item || !Object.hasOwn(names, item.kind) || ![item.x, item.z, item.rot, item.scale].every(Number.isFinite) || item.scale < 0.2 || item.scale > 5 || Math.abs(item.x) > 1000 || Math.abs(item.z) > 1000) {
+            throw new Error("El proyecto contiene una estructura no válida.");
+          }
+        }
+        clear(); W = data.W; L = data.L;
+        $("width").value = W; $("length").value = L;
+        $("layout").value = ["back", "left", "right"].includes(data.layout) ? data.layout : "back";
+        data.items.forEach(item => add(item.kind, item.x, item.z, item.rot, item.scale));
+        perimeter(); view(); status("Proyecto cargado.");
+      }
+
+      // Selección y arrastre, sin desplazar la cámara al mover una estructura.
+      const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const hitPoint = new THREE.Vector3(), offset = new THREE.Vector3();
+      let dragging = false, dragId = null;
+      function point(event) {
+        const r = renderer.domElement.getBoundingClientRect();
+        mouse.set((event.clientX - r.left) / r.width * 2 - 1, -(event.clientY - r.top) / r.height * 2 + 1);
+        ray.setFromCamera(mouse, camera);
+      }
+      renderer.domElement.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || dragging) return;
+        point(event);
+        const hit = ray.intersectObjects(items.map(item => item.group), true)[0];
+        if (!hit) { select(null); return; }
+        let root = hit.object;
+        while (root.parent && root.parent !== scene) root = root.parent;
+        select(items.find(item => item.group === root));
+        if (!selected || !ray.ray.intersectPlane(plane, hitPoint)) return;
+        offset.copy(selected.group.position).sub(hitPoint);
+        dragging = true; dragId = event.pointerId; controls.enabled = false;
+        renderer.domElement.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      }, true);
+      renderer.domElement.addEventListener("pointermove", event => {
+        if (!dragging || event.pointerId !== dragId || !selected) return;
+        point(event);
+        if (!ray.ray.intersectPlane(plane, hitPoint)) return;
+        selected.x = clamp(hitPoint.x + offset.x, -W / 2, W / 2);
+        selected.z = clamp(hitPoint.z + offset.z, -L / 2, L / 2);
+        selected.group.position.set(selected.x, 0, selected.z);
+        syncFields();
+      });
+      function stopDrag(event) {
+        if (!dragging || event.pointerId !== dragId) return;
+        dragging = false; controls.enabled = true;
+        if (renderer.domElement.hasPointerCapture(dragId)) renderer.domElement.releasePointerCapture(dragId);
+        dragId = null; perimeter();
+      }
+      window.addEventListener("pointerup", stopDrag);
+      window.addEventListener("pointercancel", stopDrag);
+
+      $("resize").onclick = () => {
+        const w = Number($("width").value), l = Number($("length").value);
+        if (!Number.isFinite(w) || !Number.isFinite(l) || w < 12 || w > 150 || l < 12 || l > 200) {
+          return status("Usa un ancho de 12 a 150 m y un largo de 12 a 200 m.");
+        }
+        W = w; L = l; perimeter(); view();
+        status("Terreno actualizado. Revisa que las estructuras permanezcan dentro del campo.");
+      };
+      const replaceLayout = () => { if (confirm("¿Reemplazar la distribución actual por el ejemplo?")) arrange(); };
+      $("arrange").onclick = replaceLayout;
+      $("reset").onclick = replaceLayout;
+      $("view3d").onclick = () => view();
+      $("viewTop").onclick = () => view(true);
+      $("add").onclick = () => { select(add($("kind").value)); perimeter(); };
+      $("apply").onclick = () => {
+        if (!selected) return;
+        const values = ["x", "z", "rot", "scale"].map(id => $(id).value.trim() === "" ? NaN : Number($(id).value));
+        const [x, z, degrees, scale] = values;
+        if (!values.every(Number.isFinite) || scale < 0.2 || scale > 5) return status("Completa los campos. La escala debe estar entre 0.2 y 5.");
+        selected.x = clamp(x, -W / 2, W / 2); selected.z = clamp(z, -L / 2, L / 2);
+        selected.rot = degrees * Math.PI / 180; selected.scale = scale;
+        selected.group.position.set(selected.x, 0, selected.z);
+        selected.group.rotation.y = selected.rot; selected.group.scale.setScalar(scale);
+        syncFields(); perimeter(); status("Cambios aplicados.");
+      };
+      $("duplicate").onclick = () => {
+        if (!selected) return;
+        const item = selected;
+        select(add(item.kind, clamp(item.x + 3, -W / 2, W / 2), clamp(item.z + 3, -L / 2, L / 2), item.rot, item.scale));
+        perimeter();
+      };
+      $("remove").onclick = () => {
+        if (!selected) return;
+        const item = selected; select(null); dispose(item.group);
+        items = items.filter(other => other !== item); perimeter();
+      };
+      $("save").onclick = () => {
+        try { localStorage.setItem("legado3d", JSON.stringify(state())); status("Guardado en este navegador. Exporta JSON para tener una copia."); }
+        catch { status("No se pudo guardar aquí. Utiliza Exportar JSON."); }
+      };
+      $("load").onclick = () => {
+        try {
+          const saved = localStorage.getItem("legado3d");
+          if (saved) restore(JSON.parse(saved)); else status("No hay un proyecto guardado en esta dirección del navegador.");
+        } catch (error) { status(error.message); }
+      };
+      $("export").onclick = () => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(state(), null, 2)], { type: "application/json" }));
+        const link = document.createElement("a");
+        link.href = url; link.download = "legado-campamento.json";
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+      $("import").onchange = async event => {
+        const file = event.target.files[0];
+        if (!file) return;
+        try {
+          if (file.size > 2000000) throw new Error("El archivo es demasiado grande.");
+          restore(JSON.parse(await file.text()));
+        } catch (error) { status("No se pudo importar: " + error.message); }
+        event.target.value = "";
+      };
+      function resizeCanvas() {
+        const width = Math.max(1, $("scene").clientWidth), height = Math.max(1, $("scene").clientHeight);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+      new ResizeObserver(resizeCanvas).observe($("scene"));
+      renderer.domElement.addEventListener("webglcontextlost", event => {
+        event.preventDefault(); renderer.setAnimationLoop(null);
+        showError(new Error("Se perdió la conexión con el motor gráfico. Recarga la página."));
+      });
+      resizeCanvas(); arrange();
+      renderer.render(scene, camera);
+      $("message").hidden = true;
+      renderer.setAnimationLoop(() => {
+        controls.update(); outline?.update(); renderer.render(scene, camera);
+      });
+    } catch (error) {
+      showError(error);
+    }
+  </script>
+</body>
+</html>
