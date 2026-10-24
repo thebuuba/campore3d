@@ -17,7 +17,7 @@ export function createPlan(host, callbacks) {
       s=`<rect x="${x-.08}" y="${z-.08}" width="${w+.16}" height="${d+.16}" rx=".22" fill="#52684b" opacity=".2"/><path d="M${x} ${z}H${w/2}V${d/2}H${x}Z" fill="${c}"/><path d="M0 ${z}H${w/2}V${d/2}H0Z" fill="#fff" opacity=".14"/><path d="M0 ${z}V${d/2}" stroke="#3b5949" opacity=".5" stroke-width=".06"/><path d="M${-w*.22} ${d/2} 0 ${d/2-d*.23} ${w*.22} ${d/2}" fill="#344e3b" opacity=".72"/><path d="M${x-.25} ${z-.25} ${x} ${z}M${w/2+.25} ${z-.25} ${w/2} ${z}M${x-.25} ${d/2+.25} ${x} ${d/2}M${w/2+.25} ${d/2+.25} ${w/2} ${d/2}" stroke="#8c795b" stroke-width=".05"/>`;
     } else if(kind==='kitchen') {
       const cfg=canopyOptions(i.canopy,h);
-      s=`<rect x="${x}" y="${z}" width="${w}" height="${d}" rx=".05" fill="${c}" stroke="#aab8ad" stroke-width=".05"/><path d="M${x} ${z}L0 0L${w/2} ${z}M${x} ${d/2}L0 0L${w/2} ${d/2}" stroke="#b2beb3" stroke-width=".035"/>`;
+      s=`<rect x="${x}" y="${z}" width="${w}" height="${d}" rx=".05" fill="${c}" stroke="#aab8ad" stroke-width=".05"/><path d="M${x} ${z}L0 0L${w/2} ${z}M${x} ${d/2}L0 0L${w/2} ${d/2}" fill="none" stroke="#b2beb3" stroke-width=".035"/>`;
       for(const [side,path] of [['front',`M${x} ${d/2}H${w/2}`],['back',`M${x} ${z}H${w/2}`],['left',`M${x} ${z}V${d/2}`],['right',`M${w/2} ${z}V${d/2}`]]) {
         const type=cfg.walls[side];if(type!=='open')s+=`<path data-wall="${side}" d="${path}" stroke="${type==='window'?'#7caeb6':'#7c8b80'}" stroke-width=".12" ${type==='door'?'stroke-dasharray=".4 .5"':''}/>`;
       }

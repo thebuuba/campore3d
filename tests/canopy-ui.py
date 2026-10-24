@@ -35,6 +35,7 @@ with sync_playwright() as p:
     assert page.locator('#wall-front').input_value()=='door'
     page.locator('#focus-item').click()
     assert page.locator('#plan2d [data-wall="front"]').count()>=1
+    assert page.locator('#plan2d path[stroke="#b2beb3"]').first.get_attribute('fill')=='none'
     page.screenshot(path=str(out/'cocina-inspector.png'),full_page=True)
     page.locator('#fit').click()
     page.screenshot(path=str(out/'campo-cocinas.png'),full_page=True)
