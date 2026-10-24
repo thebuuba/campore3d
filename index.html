@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#eff2ec">
+<title>Legado Studio · Diseña tu campamento</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23d97948'/%3E%3Cpath d='M6 24 16 7l10 17H6Zm6 0 4-8 4 8' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./src/styles.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="./" aria-label="Legado Studio"><span class="brand-mark" data-icon="tent"></span><span>LEGADO <b>STUDIO</b></span><span class="beta">0.3</span></a>
+  <div class="project-name"><input id="project-name" aria-label="Nombre del proyecto" maxlength="80" value="Campamento Legado"><span id="save-status">Solo en este equipo</span></div>
+  <div class="top-actions"><button class="icon-btn" id="undo" title="Deshacer · Ctrl Z" aria-label="Deshacer" data-icon="undo"></button><button class="icon-btn" id="redo" title="Rehacer · Ctrl Shift Z" aria-label="Rehacer" data-icon="redo"></button><span class="divider"></span><button class="quiet-btn" id="import-btn"><span data-icon="upload"></span><span class="hide-small">Abrir</span></button><button class="quiet-btn" id="save"><span data-icon="save"></span><span class="hide-small">Guardar</span></button><button class="primary" id="export"><span data-icon="download"></span>Exportar proyecto</button><input type="file" id="import" accept=".json,application/json" hidden></div>
+</header>
+<main class="workspace">
+  <aside class="library panel">
+    <div class="panel-title"><div><span class="eyebrow">TU CAJA DE HERRAMIENTAS</span><h1>Construye tu campo</h1></div><span class="soft-icon" data-icon="layers"></span></div>
+    <div class="tabs" aria-label="Biblioteca de piezas"><button class="active" data-category="camp">Campamento</button><button data-category="build">Estructuras</button></div>
+    <p class="subtle intro">Elige una pieza y dale su lugar.</p><div id="catalog" class="catalog"></div>
+    <section class="terrain-panel"><div class="section-heading"><h2>El terreno</h2><span class="tag">Provisional</span></div>
+      <div class="two-fields"><label>Ancho <span>m</span><input id="terrain-w" type="number" min="12" max="150" step="1" value="40"></label><label>Largo <span>m</span><input id="terrain-l" type="number" min="12" max="200" step="1" value="60"></label></div>
+      <button id="resize" class="outline full">Actualizar medidas <span data-icon="ruler"></span></button>
+      <label class="field-label">Distribución de referencia<select id="layout"><option value="back">Servicios al fondo</option><option value="left">Servicios a la izquierda</option><option value="right">Servicios a la derecha</option></select></label>
+      <button id="arrange" class="text-button">Reorganizar el campamento <span data-icon="arrow"></span></button>
+      <label class="toggle-row"><span>Salida secundaria</span><input id="secondary-exit" type="checkbox" role="switch"></label>
+      <details><summary>Ajustar el perímetro</summary><div class="two-fields"><label>Entre postes · m<input id="fence-gap" type="number" min="1" max="6" step="0.5" value="3"></label><label>Altura · m<input id="fence-height" type="number" min="0.5" max="3" step="0.1" value="1.2"></label></div><button id="fence-apply" class="outline full">Aplicar al perímetro</button></details>
+    </section>
+    <div class="note"><span data-icon="info"></span><p>Piensa el campo antes de montarlo.<br>Las medidas reales se ajustan después.</p></div>
+  </aside>
+  <section class="stage" aria-label="Editor del campamento">
+    <div class="stage-header"><div><span class="eyebrow">BICAMPOREE · LEGADO</span><h2>Una idea. Todo un campamento.</h2></div><span id="engine-status" class="engine-pill">Plano listo · cargando 3D</span></div>
+    <div class="view-tools"><div class="segmented"><button id="view3d" title="Perspectiva 3D"><span data-icon="cube"></span>3D</button><button id="view2d" class="active" title="Plano superior editable"><span data-icon="grid"></span>Plano</button><button id="viewfront" title="Mirar desde la entrada"><span data-icon="gate"></span>Entrada</button></div><div class="tools-right"><label class="snap"><input id="snap" type="checkbox" checked>Encajar 0.5 m</label><button id="fit" class="icon-btn" title="Centrar campo" aria-label="Centrar campo" data-icon="focus"></button><button id="capture" class="icon-btn" title="Descargar imagen PNG" aria-label="Descargar imagen PNG" data-icon="image"></button></div></div>
+    <div id="viewport"><div id="canvas3d" hidden></div><div id="plan2d"></div><div id="viewer-message" role="status" hidden></div><div class="compass"><span>N*</span><span data-icon="compass"></span></div><div class="legend"><span><i style="--swatch:#668f7b"></i>Varones</span><span><i style="--swatch:#d5a274"></i>Hembras</span><span><i style="--swatch:#8db1ba"></i>Servicios</span></div></div>
+    <div class="stage-bottom"><span id="interaction-hint">Selecciona y arrastra una pieza · R: girar · Supr: eliminar</span><span>* Orientación ilustrativa</span></div>
+  </section>
+  <aside class="inspector panel">
+    <div class="inspector-tabs"><button data-inspector="properties" class="active">Propiedades</button><button data-inspector="materials">Materiales</button></div>
+    <div id="properties-view"><div id="empty-selection"><div class="empty-illustration" data-icon="cube"></div><h2>Cada pieza, a tu medida.</h2><p>Selecciona un elemento del campo para moverlo, girarlo o cambiar su tamaño.</p><button id="select-gate" class="outline full">Diseñar la entrada <span data-icon="gate"></span></button></div>
+      <form id="item-form" hidden>
+        <div class="selected-head"><span id="selected-icon" class="selected-icon"></span><div><span class="eyebrow">ESTÁS EDITANDO</span><h2 id="selected-kind"></h2></div></div>
+        <label class="field-label">Nombre<input id="item-name" maxlength="80" required></label>
+        <h3>Posición <small>metros</small></h3><div class="three-fields"><label>X<input id="item-x" type="number" step="any" min="-500" max="500" required></label><label>Altura Y<input id="item-y" type="number" step="any" min="0" max="30" required></label><label>Z<input id="item-z" type="number" step="any" min="-500" max="500" required></label></div>
+        <h3>Dimensiones <small>metros</small></h3><div class="three-fields"><label>Ancho<input id="item-w" type="number" step="any" min="0.05" max="50" required></label><label>Alto<input id="item-h" type="number" step="any" min="0.05" max="30" required></label><label>Fondo<input id="item-d" type="number" step="any" min="0.05" max="50" required></label></div>
+        <div class="two-fields"><label>Giro · grados<input id="item-yaw" type="number" step="any" min="-3600" max="3600" required></label><label>Color<input id="item-color" type="color"></label></div>
+        <label id="gate-label-field" class="field-label" hidden>Texto de entrada<input id="item-label" maxlength="40"></label>
+        <fieldset id="canopy-fields" class="canopy-fields" hidden>
+          <legend>Toldo de cocina</legend><p class="subtle">Frente abierto y laterales de lona, como la referencia. Medidas provisionales.</p>
+          <div class="two-fields"><label>Frente<select id="wall-front"></select></label><label>Fondo<select id="wall-back"></select></label><label>Izquierda<select id="wall-left"></select></label><label>Derecha<select id="wall-right"></select></label></div>
+          <label class="field-label">Elevación del techo · m<input id="canopy-rise" type="number" min="0.01" max="2" step="any"><small>Se resta al alto total para obtener la altura lateral.</small></label>
+          <label class="toggle-row"><span>Cuerdas tensoras</span><input id="canopy-ropes" type="checkbox"></label>
+          <label class="toggle-row"><span>Mesa interior</span><input id="canopy-table" type="checkbox"></label>
+          <p class="subtle">Las ventanas son ilustrativas; no certifican ventilación ni uso seguro con fuego.</p>
+        </fieldset>
+        <button id="focus-item" type="button" class="outline full">Enfocar pieza <span data-icon="focus"></span></button>
+        <button class="primary full" type="submit">Aplicar cambios <span data-icon="check"></span></button>
+        <div class="two-fields actions"><button id="duplicate" type="button" class="outline"><span data-icon="copy"></span>Duplicar</button><button id="remove" type="button" class="danger"><span data-icon="bin"></span>Eliminar</button></div>
+      </form>
+      <section class="scene-list-section"><div class="section-heading"><h2>En tu campo</h2><span id="object-count" class="tag"></span></div><div id="scene-list" class="scene-list"></div></section>
+    </div>
+    <div id="materials-view" hidden><span class="eyebrow">INVENTARIO CONCEPTUAL</span><h2>De la idea al montaje.</h2><p class="subtle">Cantidades de las piezas visibles. No es un presupuesto ni un cálculo de resistencia.</p><div id="inventory"></div><button id="export-materials" class="outline full"><span data-icon="download"></span>Exportar inventario CSV</button><p class="materials-disclaimer">Las longitudes son geométricas: no incluyen enterramiento, amarres, desperdicio ni refuerzos. Los toldos metálicos se cuentan como kits, no como madera. Validar en el lugar con quien dirigirá el montaje.</p></div>
+    <div class="safety-card"><span data-icon="info"></span><p>Plan conceptual. Revisa accesos, separaciones y estabilidad antes de construir.</p></div>
+  </aside>
+</main>
+<footer class="statusbar"><div><span class="live-dot"></span><strong id="area-label"></strong><span class="footer-divider"></span><span id="count-label"></span></div><button id="warnings-btn">Revisiones del diseño</button><span>Legado Studio <b>·</b> Editor local</span></footer>
+<div id="toast" role="status" hidden></div>
+<dialog id="warnings-dialog"><div class="section-heading"><h2>Revisiones del diseño</h2><button id="close-dialog" class="icon-btn" aria-label="Cerrar" data-icon="close"></button></div><p class="subtle">La detección de cruces usa cajas aproximadas. No comprueba distancias sanitarias, accesibilidad, resistencia ni rutas de evacuación.</p><div id="warnings-list"></div></dialog>
+<script type="module" src="./src/app.js"></script>
+</body></html>
